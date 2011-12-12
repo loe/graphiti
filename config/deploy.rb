@@ -3,6 +3,7 @@ set :deploy_to, lambda { "/opt/app/#{application}-#{env}" }
 set :deploy_via, :remote_cache
 set :scm, :git
 set :repository, "git@github.com:paperlesspost/graphiti.git"
+set :branch, 'upstart'
 set :user, "paperless"
 set :use_sudo, false
 set :normalize_asset_timestamps, false
