@@ -1,5 +1,5 @@
 set :application, "graphiti"
-set :deploy_to, "/opt/app/graphiti"
+set :deploy_to, lambda { "/opt/app/#{application}-#{env}" }
 set :deploy_via, :remote_cache
 set :scm, :git
 set :repository, "git@github.com:paperlesspost/graphiti.git"
@@ -22,6 +22,7 @@ namespace :deploy do
 end
 
 task :production do
+  set :env, 'production'
   server 'production-graphiti01.pp.prod', :web, :app, :db, :primary => true,
 end
 
@@ -30,7 +31,7 @@ namespace :graphiti do
     run %{cd #{release_path} &&
           ln -nfs #{shared_path}/config/settings.yml #{release_path}/config/settings.yml &&
           ln -nfs #{shared_path}/config/amazon_s3.yml #{release_path}/config/amazon_s3.yml &&
-          rm #{release_path}/unicorn.rb && ln -nfs #{shared_path}/config/unicorn.rb #{release_path}/config/unicorn.rb
+          rm #{release_path}/config/unicorn.rb && ln -nfs #{shared_path}/config/unicorn.rb #{release_path}/config/unicorn.rb
         }
   end
 
@@ -44,7 +45,7 @@ namespace :bundler do
   task :install_gems, :roles => :web do
     run %{if [ -f #{release_path}/Gemfile ]; then cd #{release_path} &&
       mkdir -p #{release_path}/vendor &&
-      ln -nfs #{shared_path}/vendor/bundle #{release_path}/vendor/bundle &&
+      ln -nfs #{shared_path}/bundle #{release_path}/vendor/bundle &&
       bundle install --without test development --deployment; fi
     }
   end
