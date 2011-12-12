@@ -26,6 +26,5 @@ group :development do
 end
 
 group :production do
-  gem 'kgio', '2.4.0'
-  gem 'unicorn'
+  gem 'unicorn', '~>1'
 end
