@@ -1,6 +1,3 @@
-$:.unshift(File.expand_path('./lib', ENV['rvm_path']))
-require 'rvm/capistrano'
-
 set :application, "graphiti"
 set :deploy_to, "/opt/app/graphiti"
 set :deploy_via, :remote_cache
@@ -9,40 +6,32 @@ set :repository, "git@github.com:paperlesspost/graphiti.git"
 set :user, "paperless"
 set :use_sudo, false
 set :normalize_asset_timestamps, false
-set :rvm_ruby_string, 'default'
-set :rvm_bin_path, '/usr/local/bin'
-
-set :unicorn_binary, "/usr/local/rvm/gems/ruby-1.9.2-p0/bin/unicorn"
-set :unicorn_config, "#{current_path}/config/unicorn.rb"
-set :unicorn_pid, "#{current_path}/tmp/pids/unicorn.pid"
 
 namespace :deploy do
   task :start, :roles => :app, :except => { :no_release => true } do
-    run "cd #{current_path} && bundle exec #{unicorn_binary} -c #{unicorn_config} -E production -D"
+    run "sudo status graphiti | grep -q start && sudo restart graphiti || sudo start graphiti"
   end
+
   task :stop, :roles => :app, :except => { :no_release => true } do
-    run "kill `cat #{unicorn_pid}`"
+    run "sudo status graphiti | grep -q start && sudo stop graphiti || 0"
   end
-  task :graceful_stop, :roles => :app, :except => { :no_release => true } do
-    run "kill -s QUIT `cat #{unicorn_pid}`"
-  end
-  task :reload, :roles => :app, :except => { :no_release => true } do
-    run "kill -s USR2 `cat #{unicorn_pid}`"
-  end
+
   task :restart, :roles => :app, :except => { :no_release => true } do
-    stop
-    start
+    run "sudo status graphiti | grep -q start && sudo restart graphiti || sudo start graphiti"
   end
 end
 
 task :production do
-  server 'graphiti.pp.local', :web, :app, :db, :primary => true,
+  server 'production-graphiti01.pp.prod', :web, :app, :db, :primary => true,
 end
 
 namespace :graphiti do
   task :link_configs do
-    run "cd #{release_path} && ln -nfs #{shared_path}/config/settings.yml #{release_path}/config/settings.yml"
-    run "cd #{release_path} && ln -nfs #{shared_path}/config/amazon_s3.yml #{release_path}/config/amazon_s3.yml"
+    run %{cd #{release_path} &&
+          ln -nfs #{shared_path}/config/settings.yml #{release_path}/config/settings.yml &&
+          ln -nfs #{shared_path}/config/amazon_s3.yml #{release_path}/config/amazon_s3.yml &&
+          rm #{release_path}/unicorn.rb && ln -nfs #{shared_path}/config/unicorn.rb #{release_path}/config/unicorn.rb
+        }
   end
 
   task :compress do
@@ -60,6 +49,7 @@ namespace :bundler do
     }
   end
 end
+
 after "deploy:update_code", "graphiti:link_configs"
 after "deploy:update_code", "bundler:install_gems"
 after "deploy:update_code", "graphiti:compress"
